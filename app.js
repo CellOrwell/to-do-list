@@ -7,17 +7,21 @@ require("dotenv").config();
 // app.use(express.json());
 //    password: "",
 
+console.log(process.env.DB_USERNAME);
 
 
 var con = mysql.createConnection({
-    host: "192.168.1.85",
-    port: 3306,
-    user: `toDoUser`,
-    password: "",
-    database: "toDoDB"
+    host: process.env.DB_HOSTNAME,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
 });
 
 con.connect(function(err) {
-    if(err) throw err;
+    if(err) {
+        console.log(`ERROR ${err.message}`);
+        return;
+    }
     console.log("Connected.");
 });
