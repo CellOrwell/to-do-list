@@ -16,17 +16,31 @@ var con = mysql.createConnection({
     database: process.env.DB_NAME
 });
 
-con.connect(function(err) {
-    if(err) {
-        console.error(`ERROR ${err.message}`);
-        return;
-    }
-    console.log("Connected.");
-});
+function startDBCon() {
+    con.connect(function(err) {
+        if(err) {
+            console.error(`ERROR ${err.message}`);
+            return;
+        }
+        console.log("Connection Created.");
+    });
+}
 
-// Get Endpoints
+function endDBCon() {
+    con.end((err) => {
+        if(err) {
+            console.error(`ERROR: ${err.message}`);
+            return;
+        }
+        console.log("Connection Terminated. I'm sorry to interrupt you, Elizabeth."); //Little FNAF easter egg for ya ;)
+    });
+}
 
-// User Get Endpoints
+// ================= Endpoints =================
+
+// ================= Get Endpoints =================
+
+// ================= User Get Endpoints =================
 
 // Get user based off userId
 app.get("/users/:userId?", (req, res) => {
@@ -40,7 +54,11 @@ app.get("/users/:userId?", (req, res) => {
     }
 
     query += ";";
+    
+    startDBCon();
+
     con.query(query, [userId], (err, results) => {
+        endDBCon();
         if (err) {
             console.error(`ERROR ${err.message}. SQL Query is ${query}`);
             return;
@@ -55,7 +73,7 @@ app.get("/users/:userId?", (req, res) => {
     });
 });
 
-// List Get Endpoints
+// ================= List Get Endpoints =================
 
 // Get lists based off listId
 app.get("/lists/fromList/:listId?", (req, res) => {
@@ -68,7 +86,9 @@ app.get("/lists/fromList/:listId?", (req, res) => {
 
     query += ";";
 
+    startDBCon();
     con.query(query, [listId], (err, results) => {
+        endDBCon();
         if (err) {
             console.error(`ERROR ${err.message}`);
             return;
@@ -82,6 +102,7 @@ app.get("/lists/fromList/:listId?", (req, res) => {
     });
 });
 
+// Get lists based off userID
 app.get("/lists/fromUser/:userId?", (req, res) => {
     const userId = req.params.userId;
     const query = `SELECT * FROM lists`;
@@ -92,7 +113,9 @@ app.get("/lists/fromUser/:userId?", (req, res) => {
 
     query += ";";
 
+    startDBCon();
     con.query(query, [userId], (err, results) => {
+        endDBCon();
         if (err) {
             console.error(`ERROR ${err.message}`);
             return;
@@ -107,7 +130,7 @@ app.get("/lists/fromUser/:userId?", (req, res) => {
     });
 });
 
-// Task GET Endpoints
+// ================= Task GET Endpoints =================
 
 // Get tasks based off taskId
 app.get("/tasks/:taskId?", (req, res) => {
@@ -120,7 +143,9 @@ app.get("/tasks/:taskId?", (req, res) => {
 
     query += ";";
 
+    startDBCon();
     con.query(query, [taskId], (err, results) => {
+        endDBCon();
         if (err) {
             console.error(`ERROR ${err.message}`);
             return;
@@ -135,7 +160,7 @@ app.get("/tasks/:taskId?", (req, res) => {
     });
 });
 
-// Get tasks based off userId
+// Get tasks based off listId
 app.get("/tasks/:listId?", (req, res) => {
     const listId = req.params.listId;
     const query = `SELECT * FROM tasks`;
@@ -146,7 +171,9 @@ app.get("/tasks/:listId?", (req, res) => {
 
     query += ";";
 
+    startDBCon();
     con.query(query, [listId], (err, results) => {
+        endDBCon();
         if (err) {
             console.error(`ERROR ${err.message}`);
             return;
@@ -161,9 +188,11 @@ app.get("/tasks/:listId?", (req, res) => {
     });
 });
 
-// POST Endpoints
+// ================= End of GET Endpoints =================
 
-// User POST Endpoints
+// ================= POST Endpoints =================
+
+// ================= User POST Endpoints - SORT OUT USER VERIFICATION && Figure out if it's better to use UserID or username. =================
 
 // Add User
 // Info sent: Username and Password
@@ -171,8 +200,10 @@ app.post("/addUser", async (req, res) => {
     const userInfo = req.body;
     const query = "INSERT INTO users(username, password) VALUES(?,?)";
     try{
+        startDBCon();
         const hashPwd = await getPwd(req.body.password);
         con.query(query, [req.body.username, hashPwd], (err, result) => {
+            endDBCon();
             if(err) {
                 console.error(`Error executing query: ${err}`);
                 res.status(500).json({'message': `Unexpected Server-Side Error: ${err}`});
@@ -185,12 +216,14 @@ app.post("/addUser", async (req, res) => {
 });
 
 // Remove User
-// Info sent: none
+// Info sent: Verification
 app.post("/remUser", async (req, res) => {
     const userId = req.body.userId;
     const query = `DELETE FROM users WHERE user_id = ?`;
+    startDBCon();
     try {
         con.query(query, [userId], (err, result) => {
+            endDBCon();
             if(err) {
                 console.error(`Error executing query: ${err}`);
                 res.status(500).json({'message': `Unexpected Server-Side Error: ${err}`});
@@ -214,8 +247,7 @@ app.post("/verifyUser", async (req, res) => {
         return;
     }
 
-    let query = "SELECT password FROM users WHERE user_id = ?;";
-
+    // let query = "SELECT password FROM users WHERE user_id = ?;";
     try{
         if(await checkPwd(user, pwd)) {
             res.status(200).json({"message": "VERIFIED"});
@@ -227,8 +259,8 @@ app.post("/verifyUser", async (req, res) => {
     }
 })
 
-// Update Username
-// Info sent: Old Username and Password, New Password
+// Update User Property (Username or Password)
+// Info sent: Old Username and Password, New Username/Password, Verification, Property to Change
 
 app.post("/updateUser", async (req, res) => {
     const user = req.body.username;
@@ -238,8 +270,11 @@ app.post("/updateUser", async (req, res) => {
     const query = `UPDATE users SET ${toSet} = ? WHERE username = ?;`;
     let dataChange = "";
 
+    startDBCon();
+
     axios.post("http://localhost:3000/verifyUser", {"username": user, "password": pwd})
         .then(async response => {
+            endDBCon();
             console.log("User Verification: ", response.data.message);
 
             if(toSet === "password") {
@@ -247,9 +282,10 @@ app.post("/updateUser", async (req, res) => {
             } else {
                 dataChange = newUser;
             }
-
+            startDBCon();
             if(response.data.message == "VERIFIED") {
                 con.query(query, [dataChange, user], (err, result) => {
+                    endDBCon();
                     if(err) {
                         console.error(`Error executing query: ${err}`);
                         res.status(500).json({'message': `Unexpected Server-Side Error: ${err}`});
@@ -264,8 +300,48 @@ app.post("/updateUser", async (req, res) => {
         })
 })
 
-//Password Hashing Functions
+// ================= List POST Requests =================
 
+// Add List
+// Info Sent: UserID, Title, Description?
+
+// Remove List
+// Info Sent: UserID, ListID
+
+// Update List Property (Title or Description)
+// Info Sent: UserID, ListID, What to Change, What to Change To
+
+// ================= Task POST Requests =================
+
+// Create Task
+// Info Sent: UserID, Title, Description?, Due Date?, Priority?
+
+// Remove Task
+// Info Sent: UserID(maybe), TaskID, ListID, Verification
+
+// Update Task Properties (Title, Description)
+// Info Sent: TaskID, What to Change, What to Change to
+
+// Update List Task is In
+// Info Sent: TaskID, NewListID(maybe name)
+
+// Update Task Due Date
+// Info Sent: TaskID, NewDate
+
+// Update Task Completion
+// Info Sent: TaskID, newIsDone
+
+// Update Priority of Task
+// Info Sent: TaskID, newPriority
+
+// ================= End of POST Endpoints =================
+
+// ================= End of Endpoints =================
+ 
+
+// ================= Password Hashing Functions =================
+
+// Get Hashed Password
 async function getPwd(enteredPwd) {
     try {
         const salt = await bcrypt.genSalt(parseInt(process.env.SALT_ROUNDS));
@@ -277,6 +353,7 @@ async function getPwd(enteredPwd) {
     }
 }
 
+// Check Inputted Password Against Stored Hashed Password
 async function checkPwd(username, enteredPwd) {
     const storedQuery = `SELECT password FROM users WHERE username = ?;`;
 
