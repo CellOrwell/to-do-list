@@ -40,6 +40,12 @@ This project makes use of the following third-party libraries, each with their o
 - **License:** MIT License
 - **License Text:** [BCrypt Package License](node_modules/bcrypt/LICENSE)
 
+### <u>Axios:</u>
+
+- **Package:** Axios
+- **License:** MIT License
+- **License Text:** [Axios Package License](node_modules/axios/LICENSE)
+
 ---
 
 ## Attribution
