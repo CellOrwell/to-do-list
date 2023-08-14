@@ -34,6 +34,12 @@ This project makes use of the following third-party libraries, each with their o
 - **License:** MIT License
 - **License Text:** [MySQL Package License](node_modules/mysql/License)
 
+### <u>BCrypt:</u>
+
+- **Package:** BCrypt
+- **License:** MIT License
+- **License Text:** [BCrypt Package License](node_modules/bcrypt/LICENSE)
+
 ---
 
 ## Attribution
